@@ -17,7 +17,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    return system(cmd) == 0;
 }
 
 /**
