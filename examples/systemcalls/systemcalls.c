@@ -50,9 +50,6 @@ bool do_exec(int count, ...)
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
 
 /*
  * TODO:
@@ -72,11 +69,9 @@ bool do_exec(int count, ...)
 	}
 
 	if(!pid) { // the child process
-		int ret = execv(command[0], &command[1]);
-		if(ret == -1) {
+		int ret = execv(command[0], command);
+		if(ret == -1) { // only will reach this if execv fails.
 			exit(EXIT_FAILURE);
-		} else {
-			exit(EXIT_SUCCESS);
 		} 
 	} else { // the parent
 		int wait_status;
