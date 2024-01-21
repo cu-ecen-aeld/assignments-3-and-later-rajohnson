@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 
 /**
@@ -16,7 +17,6 @@ bool do_system(const char *cmd)
 {
 
 /*
- * TODO  add your code here
  *  Call the system() function with the command set in the cmd
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
@@ -52,7 +52,6 @@ bool do_exec(int count, ...)
     command[count] = NULL;
 
 /*
- * TODO:
  *   Execute a system command by calling fork, execv(),
  *   and wait instead of system (see LSP page 161).
  *   Use the command[0] as the full path to the command to execute
@@ -111,12 +110,44 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
 
 /*
- * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
 */
+
+	int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+	if(fd < 0) {
+		return false;
+	}
+
+	pid_t pid;
+	pid = fork();
+	if(pid == -1) {
+		// error
+		return false;
+	}
+
+	if(!pid) { // the child process
+		if(dup2(fd, 1) < 0) {
+			exit(EXIT_FAILURE);
+		}
+		close(fd);
+		int ret = execv(command[0], command);
+		if(ret == -1) { // only will reach this if execv fails.
+			exit(EXIT_FAILURE);
+		} 
+	} else { // the parent
+		int wait_status;
+		close(fd);
+		if(waitpid(pid, &wait_status, 0) != -1) {
+			if(WIFEXITED(wait_status)) {
+				if(WEXITSTATUS(wait_status) == EXIT_SUCCESS) {
+					return true;	
+				}
+			}
+		}		
+	}
 
     va_end(args);
 
