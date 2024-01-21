@@ -35,11 +35,11 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     git checkout ${KERNEL_VERSION}
 
     # TODO: Add your kernel build steps here
-	make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- mrproper
-	make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- defconfig
-	make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- all
+	make -j16 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- mrproper
+	make -j16 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- defconfig
+	make -j16 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- all
 #	make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- modules
-	make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- dtbs
+	make -j16 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- dtbs
 fi
 
 echo "Adding the Image in outdir"
@@ -72,10 +72,10 @@ else
 fi
 
 # TODO: Make and install busybox
-make distclean
-make defconfig
-make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
-make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
+make -j16 distclean
+make -j16 defconfig
+make -j16 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
+make -j16 CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 
 echo "Library dependencies"
 cd ${OUTDIR}/rootfs
@@ -100,7 +100,9 @@ make CROSS_COMPILE=${CROSS_COMPILE}
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 cd ${FINDER_APP_DIR}/
-cp -r ${FINDER_APP_DIR}/* ${OUTDIR}/rootfs/home
+cp autorun-qemu.sh finder.sh manual-linux.sh writer finder-test.sh start-qemu-app.sh start-qemu-terminal.sh ${OUTDIR}/rootfs/home
+mkdir -p ${OUTDIR}/rootfs/home/conf
+cp conf/* ${OUTDIR}/rootfs/home/conf
 
 # TODO: Chown the root directory
 sudo chown -R root:root ${OUTDIR}/rootfs
