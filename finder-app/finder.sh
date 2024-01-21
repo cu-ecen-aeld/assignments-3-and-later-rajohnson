@@ -1,3 +1,4 @@
+#!/bin/sh
 numargs=$#
 filesdir=$1
 searchstr=$2
