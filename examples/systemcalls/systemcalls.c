@@ -1,5 +1,9 @@
 #include "systemcalls.h"
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 
 /**
  * @param cmd the command to execute with system()
@@ -60,9 +64,34 @@ bool do_exec(int count, ...)
  *
 */
 
+	pid_t pid;
+	pid = fork();
+	if(pid == -1) {
+		// error
+		return false;
+	}
+
+	if(!pid) { // the child process
+		int ret = execv(command[0], &command[1]);
+		if(ret == -1) {
+			exit(EXIT_FAILURE);
+		} else {
+			exit(EXIT_SUCCESS);
+		} 
+	} else { // the parent
+		int wait_status;
+		if(waitpid(pid, &wait_status, 0) != -1) {
+			if(WIFEXITED(wait_status)) {
+				if(WEXITSTATUS(wait_status) == EXIT_SUCCESS) {
+					return true;	
+				}
+			}
+		}		
+	}
+
     va_end(args);
 
-    return true;
+    return false;
 }
 
 /**
