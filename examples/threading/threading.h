@@ -8,14 +8,6 @@
  * the joiner thread.
  */
 struct thread_data{
-    /*
-     * TODO: add other values your thread will need to manage
-     * into this structure, use this structure to communicate
-     * between the start_thread_obtaining_mutex function and
-     * your thread implementation.
-     */
-
-	
 	int pre_mutex_delay_ms;
 	int mutex_hold_delay_ms;
 	pthread_mutex_t* mutex;
