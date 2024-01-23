@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <poll.h>
 
 // Optional: use these functions to add debug or error prints to your application
 #define DEBUG_LOG(msg,...)
@@ -10,10 +11,30 @@
 
 void* threadfunc(void* thread_param)
 {
+    struct thread_data* thread_func_args = (struct thread_data *) thread_param;
 
-    // TODO: wait, obtain mutex, wait, release mutex as described by thread_data structure
-    // hint: use a cast like the one below to obtain thread arguments from your parameter
-    //struct thread_data* thread_func_args = (struct thread_data *) thread_param;
+	// delay until it is time to take the mutex	
+	poll(0, 0, thread_func_args->pre_mutex_delay_ms);
+	
+	// take mutex
+	int result = pthread_mutex_lock(thread_func_args->mutex);
+	if(result != 0) {
+		thread_func_args->thread_complete_success = false;
+		return thread_param;
+	}
+
+	// delay until time to hold mutex passes
+	poll(0, 0, thread_func_args->pre_mutex_delay_ms);
+
+	// release mutex
+	result = pthread_mutex_unlock(thread_func_args->mutex);
+	if(result != 0) {
+		thread_func_args->thread_complete_success = false; 
+		return thread_param;
+	}
+
+   	thread_func_args->thread_complete_success = true;
+
     return thread_param;
 }
 
