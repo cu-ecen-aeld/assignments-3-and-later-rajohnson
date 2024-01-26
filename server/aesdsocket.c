@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <iso646.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 int main(int argc, char **argv) {
 	printf("aesdsocket\n");	
@@ -28,7 +30,22 @@ int main(int argc, char **argv) {
 	}
 
 	// todo  Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
-
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(sockfd == -1) {
+		syslog(LOG_ERR, "error opening socket");
+        return -1;
+	}
+	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+    	syslog(LOG_ERR, "setsockopt(SO_REUSEADDR) failed");
+		return -1;
+	}
+	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int)) < 0) {
+        syslog(LOG_ERR, "setsockopt(SO_REUSEPORT) failed");
+        return -1;
+    }
+	// todo - still need to call getaddrinfo and then bind.
+	
+	
 	// todo Listens for and accepts a connection
 
 	// todo Logs message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
