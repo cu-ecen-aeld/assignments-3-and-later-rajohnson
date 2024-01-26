@@ -2,8 +2,31 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <iso646.h>
 
 int main(int argc, char **argv) {
+	printf("aesdsocket\n");	
+
+	openlog("writer", 0, LOG_USER);
+
+	// check that the arguments exist
+	if(argc > 2) {
+		printf("todo - remove. too many args\n");
+		syslog(LOG_ERR, "too many arguments - usage: %s [-d]", argv[0]);
+		return 1;
+	}
+
+	if(argc == 2) {
+		if(strncmp(argv[1], "-d", 3) == 0) {
+			// todo run in daemon mode.
+			printf("todo - daemon mode.\n");
+		} else {
+			printf("todo - remove - bad args\n");
+			syslog(LOG_ERR, "invalid argument - usage: %s [-d]", argv[0]);
+			return 1;
+		}
+	}
+
 	// todo  Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
 
 	// todo Listens for and accepts a connection
@@ -24,17 +47,8 @@ int main(int argc, char **argv) {
 
 	// todo  Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
-	printf("aesdsocket");	
 
-
-	openlog("writer", 0, LOG_USER);
-
-	// check that the arguments exist
-	if(argc != 3) {
-		syslog(LOG_ERR, "usage: writer filename string");
-		return 1;
-	}	
-
+/* old program
 	char message[1500] = {0};
 	char str[500];
 	char filename[500];
@@ -61,6 +75,7 @@ int main(int argc, char **argv) {
 
 	// close file
 	fclose(fp);
+*/
 
 	return 0;
 }
