@@ -2,6 +2,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 int main(int argc, char **argv) {
 	openlog("writer", 0, LOG_USER);
@@ -24,20 +28,20 @@ int main(int argc, char **argv) {
 	syslog(LOG_DEBUG, "%s", message);
 
 	// open file
-	FILE * fp = fopen(filename, "w"); // w option will truncate existing files
-	if(fp == NULL) {
+	int fd = open(filename, O_WRONLY); 
+	if(fd < 0) {
 		syslog(LOG_ERR, "%s", "File could not be opened");
 		return 1;
 	}
 
 	// write string to file
-	if(fwrite(str, 1, strlen(str), fp) != strlen(str)) {
+	if(write(fd, str, strlen(str)) != (ssize_t)strlen(str)) {
 		syslog(LOG_ERR, "%s", "Could not write to file");
 		return 1;
 	}
 
 	// close file
-	fclose(fp);
+	close(fd);
 
 	return 0;
 }
