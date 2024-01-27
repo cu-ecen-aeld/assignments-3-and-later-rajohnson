@@ -8,6 +8,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 // get the incoming address for a socket
 // function from listing 23 of Beej's Guide - https://beej.us/guide/bgnet/html/
@@ -88,9 +90,17 @@ int main(int argc, char **argv) {
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
 	// You may assume the data stream does not include null characters (therefore can be processed using string handling functions).
 	// You may assume the length of the packet will be shorter than the available heap size.  In other words, as long as you handle malloc() associated failures with error messages you may discard associated over-length packets.
+	int fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+	if(fd < 0) {
+		syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+	}
+	
+	write(fd, "test write to file.", 100);
 
 	// todo Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	//You may assume the total size of all packets sent (and therefore size of /var/tmp/aesdsocketdata) will be less than the size of the root filesystem, however you may not assume this total size of all packets sent will be less than the size of the available RAM for the process heap.
+	fdatasync(fd);	
+	close(fd);
 
 	// todo  Logs message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
 	close(clientfd);
