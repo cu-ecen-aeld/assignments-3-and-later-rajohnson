@@ -20,9 +20,7 @@ void* get_in_addr(struct sockaddr *sa) {
 }
 
 int main(int argc, char **argv) {
-	printf("aesdsocket\n");	
-
-	openlog("writer", 0, LOG_USER);
+	openlog("aesdsocket", 0, LOG_USER);
 
 	// check that the arguments exist
 	if(argc > 2) {
