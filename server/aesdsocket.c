@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <iso646.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 int main(int argc, char **argv) {
 	printf("aesdsocket\n");	
@@ -30,7 +31,18 @@ int main(int argc, char **argv) {
 	}
 
 	// todo  Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	struct addrinfo hints;
+	struct addrinfo* servinfo;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	if(getaddrinfo(NULL, "9000", &hints, &servinfo) != 0) {
+		syslog(LOG_ERR, "getaddrinfo failed");
+		return -1;
+	}
+	// todo need to call freeaddrinfo(servinfo); before exiting after this
+	int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	if(sockfd == -1) {
 		syslog(LOG_ERR, "error opening socket");
         return -1;
@@ -43,8 +55,10 @@ int main(int argc, char **argv) {
         syslog(LOG_ERR, "setsockopt(SO_REUSEPORT) failed");
         return -1;
     }
-	// todo - still need to call getaddrinfo and then bind.
-	
+	if(bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) != 0) {
+		syslog(LOG_ERR, "bind failed");
+		return -1;
+	}
 	
 	// todo Listens for and accepts a connection
 
@@ -93,6 +107,8 @@ int main(int argc, char **argv) {
 	// close file
 	fclose(fp);
 */
+
+	freeaddrinfo(servinfo);
 
 	return 0;
 }
