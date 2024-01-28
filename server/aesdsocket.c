@@ -23,6 +23,7 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 int main(int argc, char **argv) {
+	bool is_daemon = false;
 	openlog("aesdsocket", 0, LOG_USER);
 
 	// check that the arguments exist
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
 
 	if(argc == 2) {
 		if(strncmp(argv[1], "-d", 3) == 0) {
-			// todo run in daemon mode.
+			is_daemon = true;
 			printf("todo - daemon mode.\n");
 		} else {
 			printf("todo - remove - bad args\n");
@@ -73,6 +74,11 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
+	if(is_daemon) {
+		// todo - implement daemon behavior
+	
+	}
+
 	// Listens for and accepts a connection
 	if(listen(sockfd, 10) < 0) {
 		syslog(LOG_ERR, "listen failed");
