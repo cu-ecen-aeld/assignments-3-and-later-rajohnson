@@ -75,8 +75,27 @@ int main(int argc, char **argv) {
 	}
 	
 	if(is_daemon) {
-		// todo - implement daemon behavior
-	
+		// todo - finish implementing daemon behavior
+		pid_t pid = fork();
+
+		if(pid == -1) { // error forking
+			syslog(LOG_ERR, "error when calling fork()");
+			return -1;
+		} else if(pid != 0) {  // parent thread
+			exit(EXIT_SUCCESS);
+		}
+
+		if(setsid() == -1) {
+			syslog(LOG_ERR, "error calling setsid()");
+			return -1;
+		}
+
+		if(chdir("/") == -1) {
+			syslog(LOG_ERR, "error calling chdir");
+			return -1;
+		}
+
+		// todo - redirect stdin, stdout, stderr to /dev/null
 	}
 
 	// Listens for and accepts a connection
