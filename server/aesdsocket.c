@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	// todo  Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
+	// Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
 	struct addrinfo hints;
 	struct addrinfo* servinfo;
 	memset(&hints, 0, sizeof hints);
@@ -106,12 +106,25 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
-	char* writedata = "test data to write to the file.";
-	
-	if(write(fd, writedata, strlen(writedata)) != (ssize_t)strlen(writedata)) {
-		syslog(LOG_ERR, "error writing data to file.");
-		return -1;
+	const int BUF_LEN = 100;
+	char rx_data[BUF_LEN];
+	memset(rx_data, 0, BUF_LEN);
+	int numbytes;
+	while((numbytes = recv(new_socket, rx_data, BUF_LEN - 1, 0)) > 0) {
+		syslog(LOG_USER, "recieved[%li]: %s", strlen(rx_data), rx_data);
+		syslog(LOG_USER, "recieved[%li]: %x %x %x %x %x", strlen(rx_data), rx_data[0], rx_data[1],rx_data[2],rx_data[3],rx_data[4]);
+		if(write(fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
+			syslog(LOG_ERR, "error writing data to file.");
+			return -1;
+		}
+
+		if(rx_data[numbytes - 1] == '\n') {
+			break;
+		}
+
+		memset(rx_data, 0, BUF_LEN);
 	}
+	
 
 	// todo Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	//You may assume the total size of all packets sent (and therefore size of /var/tmp/aesdsocketdata) will be less than the size of the root filesystem, however you may not assume this total size of all packets sent will be less than the size of the available RAM for the process heap.
