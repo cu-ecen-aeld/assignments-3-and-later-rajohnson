@@ -111,8 +111,8 @@ int main(int argc, char **argv) {
 	memset(rx_data, 0, BUF_LEN);
 	int numbytes;
 	while((numbytes = recv(new_socket, rx_data, BUF_LEN - 1, 0)) > 0) {
-		syslog(LOG_USER, "recieved[%li]: %s", strlen(rx_data), rx_data);
-		syslog(LOG_USER, "recieved[%li]: %x %x %x %x %x", strlen(rx_data), rx_data[0], rx_data[1],rx_data[2],rx_data[3],rx_data[4]);
+		syslog(LOG_USER, "recieved[%li, %i]: %s", strlen(rx_data), numbytes, rx_data);
+//		syslog(LOG_USER, "recieved[%li]: %x %x %x %x %x", strlen(rx_data), rx_data[0], rx_data[1],rx_data[2],rx_data[3],rx_data[4]);
 		if(write(fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
 			syslog(LOG_ERR, "error writing data to file.");
 			return -1;
@@ -124,10 +124,19 @@ int main(int argc, char **argv) {
 
 		memset(rx_data, 0, BUF_LEN);
 	}
-	
 
 	// todo Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	//You may assume the total size of all packets sent (and therefore size of /var/tmp/aesdsocketdata) will be less than the size of the root filesystem, however you may not assume this total size of all packets sent will be less than the size of the available RAM for the process heap.
+	
+	// move back to the beginning of the file
+	lseek(fd, 0, SEEK_SET);
+
+	char tx_data[BUF_LEN];
+	while((numbytes = read(fd, tx_data, BUF_LEN)) > 0) {
+		send(new_socket, tx_data, numbytes, 0);
+	}	
+
+
 	fdatasync(fd);	
 	close(fd);
 
