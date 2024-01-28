@@ -11,10 +11,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-// get the incoming address for a socket
-// function from listing 23 of Beej's Guide - https://beej.us/guide/bgnet/html/
-void* get_in_addr(struct sockaddr *sa) {
-	if (sa->sa_family == AF_INET) {
+
+// get sockaddr, IPv4 or IPv6 -- from Beej's guide
+void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
 
@@ -73,29 +74,44 @@ int main(int argc, char **argv) {
 	}
 	
 	// Listens for and accepts a connection
-	listen(sockfd, 10);
+	if(listen(sockfd, 10) < 0) {
+		syslog(LOG_ERR, "listen failed");
+		return -1;
+	}
 
 	struct sockaddr_storage their_addr;
-	socklen_t addr_size;
-	int clientfd = accept(sockfd, (struct sockaddr*)&their_addr, &addr_size);
+	socklen_t addr_size = sizeof their_addr;
+	int new_socket = accept(sockfd, (struct sockaddr*)&their_addr, &addr_size);
+	if(new_socket < 0) {
+		syslog(LOG_ERR, "accept failed");
+		return -1;
+	}
 
 	// Logs message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
-	char s[INET6_ADDRSTRLEN];
-	if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s) == NULL) {
+	char client_ip[INET6_ADDRSTRLEN];
+	
+	if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
 		syslog(LOG_ERR, "inet_ntop failed");
+		return -1;
 	}
-	syslog(LOG_USER, "Accepted connection from %s", s); 
+	syslog(LOG_USER, "Accepted connection from %s", client_ip); 
 
 	// todo Receives data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist. 
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
 	// You may assume the data stream does not include null characters (therefore can be processed using string handling functions).
 	// You may assume the length of the packet will be shorter than the available heap size.  In other words, as long as you handle malloc() associated failures with error messages you may discard associated over-length packets.
-	int fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+	int fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
 	if(fd < 0) {
 		syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+		return -1;
 	}
 	
-	write(fd, "test write to file.", 100);
+	char* writedata = "test data to write to the file.";
+	
+	if(write(fd, writedata, strlen(writedata)) != (ssize_t)strlen(writedata)) {
+		syslog(LOG_ERR, "error writing data to file.");
+		return -1;
+	}
 
 	// todo Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	//You may assume the total size of all packets sent (and therefore size of /var/tmp/aesdsocketdata) will be less than the size of the root filesystem, however you may not assume this total size of all packets sent will be less than the size of the available RAM for the process heap.
@@ -103,8 +119,8 @@ int main(int argc, char **argv) {
 	close(fd);
 
 	// todo  Logs message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
-	close(clientfd);
-	syslog(LOG_USER, "Closed connection from %s", s);
+	close(new_socket);
+	syslog(LOG_USER, "Closed connection from %s", client_ip);
 
 	// todo Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received (see below).
 
