@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
 
 
 // get sockaddr, IPv4 or IPv6 -- from Beej's guide
@@ -95,7 +98,10 @@ int main(int argc, char **argv) {
 			return -1;
 		}
 
-		// todo - redirect stdin, stdout, stderr to /dev/null
+		// redirect stdin, stdout, stderr to /dev/null
+		open("/dev/null", O_RDWR); // stdin
+		dup(0); // stdout
+		dup(0); // stderr
 	}
 
 	// Listens for and accepts a connection
