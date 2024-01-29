@@ -14,7 +14,6 @@
 #include <stdlib.h>
 
 
-
 // get sockaddr, IPv4 or IPv6 -- from Beej's guide
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -31,7 +30,6 @@ int main(int argc, char **argv) {
 
 	// check that the arguments exist
 	if(argc > 2) {
-		printf("todo - remove. too many args\n");
 		syslog(LOG_ERR, "too many arguments - usage: %s [-d]", argv[0]);
 		return 1;
 	}
@@ -39,15 +37,13 @@ int main(int argc, char **argv) {
 	if(argc == 2) {
 		if(strncmp(argv[1], "-d", 3) == 0) {
 			is_daemon = true;
-			printf("todo - daemon mode.\n");
 		} else {
-			printf("todo - remove - bad args\n");
 			syslog(LOG_ERR, "invalid argument - usage: %s [-d]", argv[0]);
 			return 1;
 		}
 	}
 
-	// Opens a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
+	// Open a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
 	struct addrinfo hints;
 	struct addrinfo* servinfo;
 	memset(&hints, 0, sizeof hints);
@@ -78,7 +74,6 @@ int main(int argc, char **argv) {
 	}
 	
 	if(is_daemon) {
-		// todo - finish implementing daemon behavior
 		pid_t pid = fork();
 
 		if(pid == -1) { // error forking
@@ -104,7 +99,7 @@ int main(int argc, char **argv) {
 		dup(0); // stderr
 	}
 
-	// Listens for and accepts a connection
+	// Listen for and accept a connection
 	if(listen(sockfd, 10) < 0) {
 		syslog(LOG_ERR, "listen failed");
 		return -1;
@@ -118,7 +113,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	// Logs message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
+	// Log message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
 	char client_ip[INET6_ADDRSTRLEN];
 	
 	if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
@@ -127,7 +122,7 @@ int main(int argc, char **argv) {
 	}
 	syslog(LOG_USER, "Accepted connection from %s", client_ip); 
 
-	// todo Receives data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist. 
+	// Receive data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist. 
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
 	// You may assume the data stream does not include null characters (therefore can be processed using string handling functions).
 	// You may assume the length of the packet will be shorter than the available heap size.  In other words, as long as you handle malloc() associated failures with error messages you may discard associated over-length packets.
@@ -143,7 +138,6 @@ int main(int argc, char **argv) {
 	int numbytes;
 	while((numbytes = recv(new_socket, rx_data, BUF_LEN - 1, 0)) > 0) {
 		syslog(LOG_USER, "recieved[%li, %i]: %s", strlen(rx_data), numbytes, rx_data);
-//		syslog(LOG_USER, "recieved[%li]: %x %x %x %x %x", strlen(rx_data), rx_data[0], rx_data[1],rx_data[2],rx_data[3],rx_data[4]);
 		if(write(fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
 			syslog(LOG_ERR, "error writing data to file.");
 			return -1;
@@ -156,9 +150,7 @@ int main(int argc, char **argv) {
 		memset(rx_data, 0, BUF_LEN);
 	}
 
-	// todo Returns the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
-	//You may assume the total size of all packets sent (and therefore size of /var/tmp/aesdsocketdata) will be less than the size of the root filesystem, however you may not assume this total size of all packets sent will be less than the size of the available RAM for the process heap.
-	
+	// Return the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	// move back to the beginning of the file
 	lseek(fd, 0, SEEK_SET);
 
@@ -171,7 +163,7 @@ int main(int argc, char **argv) {
 	fdatasync(fd);	
 	close(fd);
 
-	// todo  Logs message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
+	// Log message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
 	close(new_socket);
 	syslog(LOG_USER, "Closed connection from %s", client_ip);
 
