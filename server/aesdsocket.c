@@ -29,13 +29,13 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 void signal_handler(int signal) {
+	(void)signal; // silence compiler warning about unused variable, needs this function signature for signal
 	// Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
 	syslog(LOG_USER, "Caught signal, exiting");
 	close(server_fd);
 	// todo - do client sockets need to be closed as well? how to track?
 	if(remove("/var/tmp/aesdsocketdata") != 0) {
-		printf("error deleting data file.");
 		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
 	}
 	exit(EXIT_SUCCESS);
