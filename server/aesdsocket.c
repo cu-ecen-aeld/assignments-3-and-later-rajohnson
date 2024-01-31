@@ -144,8 +144,8 @@ int main(int argc, char **argv) {
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
 	// You may assume the data stream does not include null characters (therefore can be processed using string handling functions).
 	// You may assume the length of the packet will be shorter than the available heap size.  In other words, as long as you handle malloc() associated failures with error messages you may discard associated over-length packets.
-	int fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
-	if(fd < 0) {
+	int rxdata_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+	if(rxdata_fd < 0) {
 		syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
 		return -1;
 	}
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 	int numbytes;
 	while((numbytes = recv(new_socket, rx_data, BUF_LEN - 1, 0)) > 0) {
 		syslog(LOG_USER, "recieved[%li, %i]: %s", strlen(rx_data), numbytes, rx_data);
-		if(write(fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
+		if(write(rxdata_fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
 			syslog(LOG_ERR, "error writing data to file.");
 			return -1;
 		}
@@ -170,16 +170,15 @@ int main(int argc, char **argv) {
 
 	// Return the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	// move back to the beginning of the file
-	lseek(fd, 0, SEEK_SET);
+	lseek(rxdata_fd, 0, SEEK_SET);
 
 	char tx_data[BUF_LEN];
-	while((numbytes = read(fd, tx_data, BUF_LEN)) > 0) {
+	while((numbytes = read(rxdata_fd, tx_data, BUF_LEN)) > 0) {
 		send(new_socket, tx_data, numbytes, 0);
 	}	
 
-
-	fdatasync(fd);	
-	close(fd);
+	fdatasync(rxdata_fd);	
+	close(rxdata_fd);
 
 	// Log message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
 	close(new_socket);
