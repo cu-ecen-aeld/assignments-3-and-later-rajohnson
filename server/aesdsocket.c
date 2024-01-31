@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#define NUM_CONNECTIONS (10)
+
+int server_fd; // file descriptor for the server socket
 
 // get sockaddr, IPv4 or IPv6 -- from Beej's guide
 void *get_in_addr(struct sockaddr *sa)
@@ -29,7 +32,8 @@ void signal_handler(int signal) {
 	// Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
 	syslog(LOG_USER, "Caught signal, exiting");
-	// todo - close sockets
+	close(server_fd);
+	// todo - do client sockets need to be closed as well? how to track?
 	exit(EXIT_SUCCESS);
 }
 
@@ -63,20 +67,20 @@ int main(int argc, char **argv) {
 		syslog(LOG_ERR, "getaddrinfo failed");
 		return -1;
 	}
-	int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-	if(sockfd == -1) {
+	server_fd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+	if(server_fd == -1) {
 		syslog(LOG_ERR, "error opening socket");
         return -1;
 	}
-	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
     	syslog(LOG_ERR, "setsockopt(SO_REUSEADDR) failed");
 		return -1;
 	}
-	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int)) < 0) {
+	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int)) < 0) {
         syslog(LOG_ERR, "setsockopt(SO_REUSEPORT) failed");
         return -1;
     }
-	if(bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) != 0) {
+	if(bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) != 0) {
 		syslog(LOG_ERR, "bind failed");
 		return -1;
 	}
@@ -113,14 +117,14 @@ int main(int argc, char **argv) {
 	signal(SIGTERM, signal_handler);	
 
 	// Listen for and accept a connection
-	if(listen(sockfd, 10) < 0) {
+	if(listen(server_fd, NUM_CONNECTIONS) < 0) {
 		syslog(LOG_ERR, "listen failed");
 		return -1;
 	}
 
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
-	int new_socket = accept(sockfd, (struct sockaddr*)&their_addr, &addr_size);
+	int new_socket = accept(server_fd, (struct sockaddr*)&their_addr, &addr_size);
 	if(new_socket < 0) {
 		syslog(LOG_ERR, "accept failed");
 		return -1;
