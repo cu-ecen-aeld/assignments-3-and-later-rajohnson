@@ -54,7 +54,6 @@ int main(int argc, char **argv) {
 		syslog(LOG_ERR, "getaddrinfo failed");
 		return -1;
 	}
-	// todo need to call freeaddrinfo(servinfo); before exiting after this
 	int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	if(sockfd == -1) {
 		syslog(LOG_ERR, "error opening socket");
@@ -72,6 +71,8 @@ int main(int argc, char **argv) {
 		syslog(LOG_ERR, "bind failed");
 		return -1;
 	}
+	freeaddrinfo(servinfo);
+
 	
 	if(is_daemon) {
 		pid_t pid = fork();
@@ -120,6 +121,7 @@ int main(int argc, char **argv) {
 		syslog(LOG_ERR, "inet_ntop failed");
 		return -1;
 	}
+
 	syslog(LOG_USER, "Accepted connection from %s", client_ip); 
 
 	// Receive data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist. 
@@ -171,9 +173,7 @@ int main(int argc, char **argv) {
 
 	// todo  Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
-
-
-	freeaddrinfo(servinfo);
+	syslog(LOG_USER, "Caught signal, exiting");
 
 	return 0;
 }
