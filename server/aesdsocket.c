@@ -34,6 +34,10 @@ void signal_handler(int signal) {
 	syslog(LOG_USER, "Caught signal, exiting");
 	close(server_fd);
 	// todo - do client sockets need to be closed as well? how to track?
+	if(remove("/var/tmp/aesdsocketdata") != 0) {
+		printf("error deleting data file.");
+		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
+	}
 	exit(EXIT_SUCCESS);
 }
 
