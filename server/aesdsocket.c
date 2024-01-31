@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <signal.h>
 
 
 // get sockaddr, IPv4 or IPv6 -- from Beej's guide
@@ -22,6 +23,14 @@ void *get_in_addr(struct sockaddr *sa)
     }
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+void signal_handler(int signal) {
+	// Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
+	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
+	syslog(LOG_USER, "Caught signal, exiting");
+	// todo - close sockets
+	exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv) {
@@ -100,6 +109,9 @@ int main(int argc, char **argv) {
 		dup(0); // stderr
 	}
 
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);	
+
 	// Listen for and accept a connection
 	if(listen(sockfd, 10) < 0) {
 		syslog(LOG_ERR, "listen failed");
@@ -170,10 +182,6 @@ int main(int argc, char **argv) {
 	syslog(LOG_USER, "Closed connection from %s", client_ip);
 
 	// todo Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received (see below).
-
-	// todo  Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
-	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
-	syslog(LOG_USER, "Caught signal, exiting");
 
 	return 0;
 }
