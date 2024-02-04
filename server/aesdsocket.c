@@ -188,14 +188,16 @@ int main(int argc, char **argv) {
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
 
-	int new_socket = accept(server_fd, (struct sockaddr*)&their_addr, &addr_size);
-	if(new_socket < 0) {
-		syslog(LOG_ERR, "accept failed");
-		return -1;
-	}
+	// accept connections from new clients forever in a loop until SIGINT or SIGTERM is received.
+	while(true) {
+		int new_socket = accept(server_fd, (struct sockaddr*)&their_addr, &addr_size);
+		if(new_socket < 0) {
+			syslog(LOG_ERR, "accept failed");
+			return -1;
+		}
 
-	connection_handler(new_socket, their_addr);
-	// todo Restarts accepting connections from new clients forever in a loop until SIGINT or SIGTERM is received (see below).
+		connection_handler(new_socket, their_addr);
+	}
 
 	return 0;
 }
