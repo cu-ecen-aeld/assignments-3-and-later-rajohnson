@@ -34,7 +34,6 @@ void signal_handler(int signal) {
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
 	syslog(LOG_USER, "Caught signal, exiting");
 	close(server_fd);
-	// todo - do client sockets need to be closed as well? how to track?
 	if(remove("/var/tmp/aesdsocketdata") != 0) {
 		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
 	}
@@ -196,7 +195,16 @@ int main(int argc, char **argv) {
 			return -1;
 		}
 
-		connection_handler(new_socket, their_addr);
+		// fork and have the child handle the connection
+		pid_t pid = fork();
+		if(pid == -1) {	
+            syslog(LOG_ERR, "fork failed");
+            return -1;
+        } else if(pid == 0) { // child process
+			connection_handler(new_socket, their_addr);
+		} else { // parent process
+			// nothing to do
+		}
 	}
 
 	return 0;
