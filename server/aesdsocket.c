@@ -13,8 +13,20 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/queue.h>
+#include <pthread.h>
 
 #define NUM_CONNECTIONS (10)
+
+struct slist_data_s {
+	int thread_handle;
+	SLIST_ENTRY(slist_data_s) entries;
+};
+
+SLIST_HEAD(slisthead, slist_data_s) head = SLIST_HEAD_INITIALIZER(head);
+struct slist_data_t *datap = NULL;
+
+pthread_mutex_t file_mutex;
 
 int server_fd; // file descriptor for the server socket
 
@@ -37,6 +49,13 @@ void signal_handler(int signal) {
 	if(remove("/var/tmp/aesdsocketdata") != 0) {
 		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
 	}
+
+	while(not SLIST_EMPTY(&head)) {
+		int thread_id = SLIST_FIRST(&head)->thread_handle;
+		printf("%i", thread_id);
+		// todo - join threads
+	}
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -50,6 +69,8 @@ void connection_handler(int client_fd, struct sockaddr_storage their_addr) {
 	}
 
 	syslog(LOG_USER, "Accepted connection from %s", client_ip); 
+
+	pthread_mutex_lock(&file_mutex);
 
 	// Receive data over the connection and appends to file /var/tmp/aesdsocketdata, creating this file if it doesn’t exist. 
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
@@ -78,6 +99,8 @@ void connection_handler(int client_fd, struct sockaddr_storage their_addr) {
 
 		memset(rx_data, 0, BUF_LEN);
 	}
+
+	pthread_mutex_unlock(&file_mutex);
 
 	// Return the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
 	// move back to the beginning of the file
@@ -117,6 +140,9 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 	}
+
+	// Set up linked list to track threads
+	SLIST_INIT(&head);
 
 	// Open a stream socket bound to port 9000, failing and returning -1 if any of the socket connection steps fail.
 	struct addrinfo hints;
@@ -203,7 +229,14 @@ int main(int argc, char **argv) {
         } else if(pid == 0) { // child process
 			connection_handler(new_socket, their_addr);
 		} else { // parent process
-			// nothing to do
+			struct slist_data_s* thread_entry = malloc(sizeof(struct slist_data_s));
+			if(thread_entry == NULL) {
+				syslog(LOG_ERR, "Error creating thread handle linked list.");
+				return -1;
+			}
+
+			thread_entry->thread_handle = pid;
+			SLIST_INSERT_HEAD(&head, thread_entry, entries);
 		}
 	}
 
