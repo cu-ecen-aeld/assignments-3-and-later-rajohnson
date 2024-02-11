@@ -18,8 +18,14 @@
 
 #define NUM_CONNECTIONS (10)
 
+struct thread_args_s {
+	int client_fd; 
+	struct sockaddr_storage their_addr;
+};
+
 struct slist_data_s {
-	int thread_handle;
+	pthread_t thread_handle;
+	struct thread_args_s args;
 	SLIST_ENTRY(slist_data_s) entries;
 };
 
@@ -51,22 +57,25 @@ void signal_handler(int signal) {
 	}
 
 	while(not SLIST_EMPTY(&head)) {
-		int thread_id = SLIST_FIRST(&head)->thread_handle;
+		pthread_t thread_id = SLIST_FIRST(&head)->thread_handle;
 		struct slist_data_s* entry = SLIST_FIRST(&head);
 		SLIST_REMOVE_HEAD(&head, entries);
 		free(entry);
-		printf("%i", thread_id);
-		// todo - join threads
+		pthread_join(thread_id, NULL);
 	}
 
 	exit(EXIT_SUCCESS);
 }
 
-void connection_handler(int client_fd, struct sockaddr_storage their_addr) {
+
+
+void *connection_handler(void* args) {
 	// Log message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
 	char client_ip[INET6_ADDRSTRLEN];
-
-	if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
+	int client_fd = (*(struct thread_args_s*)args).client_fd;
+	struct sockaddr_storage their_addr = (*(struct thread_args_s*)args).their_addr;
+	
+if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
 		syslog(LOG_ERR, "inet_ntop failed");
 		exit(-1);
 	}
@@ -224,23 +233,25 @@ int main(int argc, char **argv) {
 			return -1;
 		}
 
-		// fork and have the child handle the connection
-		pid_t pid = fork();
-		if(pid == -1) {	
+		// create a thread to handle the connection
+		struct slist_data_s* thread_entry = malloc(sizeof(struct slist_data_s));
+		if(thread_entry == NULL) {
+			syslog(LOG_ERR, "Error creating thread handle linked list.");
+			return -1;
+		}
+
+		int result = pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, NULL); // todo - finish
+		/* if(pid == -1) {	
             syslog(LOG_ERR, "fork failed");
             return -1;
         } else if(pid == 0) { // child process
 			connection_handler(new_socket, their_addr);
 		} else { // parent process
-			struct slist_data_s* thread_entry = malloc(sizeof(struct slist_data_s));
-			if(thread_entry == NULL) {
-				syslog(LOG_ERR, "Error creating thread handle linked list.");
-				return -1;
-			}
-
-			thread_entry->thread_handle = pid;
+*/
+		//	thread_entry->thread_handle = pid;
+			(void)result;
 			SLIST_INSERT_HEAD(&head, thread_entry, entries);
-		}
+//		}
 	}
 
 	return 0;
