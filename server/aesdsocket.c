@@ -52,6 +52,9 @@ void signal_handler(int signal) {
 
 	while(not SLIST_EMPTY(&head)) {
 		int thread_id = SLIST_FIRST(&head)->thread_handle;
+		struct slist_data_s* entry = SLIST_FIRST(&head);
+		SLIST_REMOVE_HEAD(&head, entries);
+		free(entry);
 		printf("%i", thread_id);
 		// todo - join threads
 	}
