@@ -240,18 +240,15 @@ int main(int argc, char **argv) {
 			return -1;
 		}
 
-		int result = pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, NULL); // todo - finish
-		/* if(pid == -1) {	
-            syslog(LOG_ERR, "fork failed");
+		thread_entry->args.client_fd = new_socket;
+		thread_entry->args.their_addr = their_addr;
+
+		if(pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, thread_entry) == 0) {
+			syslog(LOG_ERR, "thread creation failed");
             return -1;
-        } else if(pid == 0) { // child process
-			connection_handler(new_socket, their_addr);
-		} else { // parent process
-*/
-		//	thread_entry->thread_handle = pid;
-			(void)result;
-			SLIST_INSERT_HEAD(&head, thread_entry, entries);
-//		}
+		}
+	
+		SLIST_INSERT_HEAD(&head, thread_entry, entries);
 	}
 
 	return 0;
