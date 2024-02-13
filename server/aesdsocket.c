@@ -50,7 +50,7 @@ void signal_handler(int signal) {
 	(void)signal; // silence compiler warning about unused variable, needs this function signature for signal
 	// Gracefully exits when SIGINT or SIGTERM is received, completing any open connection operations, closing any open sockets, and deleting the file /var/tmp/aesdsocketdata.
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
-	syslog(LOG_USER, "Caught signal, exiting");
+	syslog(LOG_INFO, "Caught signal, exiting");
 	close(server_fd);
 	if(remove("/var/tmp/aesdsocketdata") != 0) {
 		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
@@ -129,7 +129,7 @@ void *connection_handler(void* args) {
 
 	// Log message to the syslog “Closed connection from XXX” where XXX is the IP address of the connected client.
 	close(client_fd);
-	syslog(LOG_USER, "Closed connection from %s", client_ip);
+	syslog(LOG_INFO, "Closed connection from %s", client_ip);
 
 	return (void*)0;
 }
