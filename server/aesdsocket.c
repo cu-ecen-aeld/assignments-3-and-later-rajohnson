@@ -72,10 +72,10 @@ void signal_handler(int signal) {
 void *connection_handler(void* args) {
 	// Log message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
 	char client_ip[INET6_ADDRSTRLEN];
-	int client_fd = (*(struct thread_args_s*)args).client_fd;
-	struct sockaddr_storage their_addr = (*(struct thread_args_s*)args).their_addr;
+	int client_fd = ((struct thread_args_s*)args)->client_fd;
+	struct sockaddr_storage their_addr = ((struct thread_args_s*)args)->their_addr;
 	
-if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
+	if(inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), client_ip, sizeof client_ip) == NULL) {	
 		syslog(LOG_ERR, "inet_ntop failed");
 		exit(-1);
 	}
@@ -243,8 +243,9 @@ int main(int argc, char **argv) {
 		thread_entry->args.client_fd = new_socket;
 		thread_entry->args.their_addr = their_addr;
 
-		if(pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, thread_entry) == 0) {
+		if(pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, &(thread_entry->args)) != 0) {
 			syslog(LOG_ERR, "thread creation failed");
+			
             return -1;
 		}
 	
