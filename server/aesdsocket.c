@@ -20,6 +20,7 @@
 
 struct thread_args_s {
 	int client_fd; 
+	bool terminate_thread;
 	struct sockaddr_storage their_addr;
 };
 
@@ -57,11 +58,15 @@ void signal_handler(int signal) {
 	}
 
 	while(not SLIST_EMPTY(&head)) {
+		// signal thread should terminate and wait for it to join
 		pthread_t thread_id = SLIST_FIRST(&head)->thread_handle;
+		SLIST_FIRST(&head)->terminate_thread = true;
+		pthread_join(thread_id, NULL);
+
+		// remove entry from the linked list and free memory
 		struct slist_data_s* entry = SLIST_FIRST(&head);
 		SLIST_REMOVE_HEAD(&head, entries);
 		free(entry);
-		pthread_join(thread_id, NULL);
 	}
 
 	exit(EXIT_SUCCESS);
@@ -242,6 +247,7 @@ int main(int argc, char **argv) {
 		}
 
 		thread_entry->args.client_fd = new_socket;
+		thread_entry->args.terminate_thread = false;
 		thread_entry->args.their_addr = their_addr;
 
 		if(pthread_create(&(thread_entry->thread_handle), NULL, connection_handler, &(thread_entry->args)) != 0) {
