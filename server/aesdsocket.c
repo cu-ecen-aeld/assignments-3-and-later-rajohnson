@@ -154,8 +154,7 @@ void *connection_handler(void* args) {
 	memset(rx_data, 0, BUF_LEN);
 	int numbytes;
 	while((numbytes = recv(client_fd, rx_data, BUF_LEN - 1, 0)) > 0) {
-		syslog(LOG_INFO, "recieved[%li, %i]: %s", strlen(rx_data), numbytes, rx_data);
-		if(write(rxdata_fd, rx_data, strlen(rx_data)) != (ssize_t)strlen(rx_data)) {
+		if(write(rxdata_fd, rx_data, numbytes) != numbytes) {
 			syslog(LOG_ERR, "error writing data to file.");
 			exit(-1);
 		}
@@ -176,7 +175,6 @@ void *connection_handler(void* args) {
 	char tx_data[BUF_LEN];
 	memset(tx_data, 0, BUF_LEN);
 	while((numbytes = read(rxdata_fd, tx_data, BUF_LEN)) > 0) {
-		syslog(LOG_INFO, "sending[%li, %i]: %s", strlen(tx_data), numbytes, tx_data);
 		send(client_fd, tx_data, numbytes, 0);
 	}	
 
