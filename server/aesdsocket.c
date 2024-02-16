@@ -126,6 +126,7 @@ void *timestamp_handler(void* args) {
 void *connection_handler(void* args) {
 	// Log message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
 	char client_ip[INET6_ADDRSTRLEN];
+	memset(client_ip, 0, INET6_ADDRSTRLEN);
 	int client_fd = ((struct thread_args_s*)args)->client_fd;
 	struct sockaddr_storage their_addr = ((struct thread_args_s*)args)->their_addr;
 	
@@ -173,6 +174,7 @@ void *connection_handler(void* args) {
 	lseek(rxdata_fd, 0, SEEK_SET);
 
 	char tx_data[BUF_LEN];
+	memset(tx_data, 0, BUF_LEN);
 	while((numbytes = read(rxdata_fd, tx_data, BUF_LEN)) > 0) {
 		syslog(LOG_INFO, "sending[%li, %i]: %s", strlen(tx_data), numbytes, tx_data);
 		send(client_fd, tx_data, numbytes, 0);
