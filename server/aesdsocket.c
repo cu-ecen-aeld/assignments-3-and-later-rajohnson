@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <sys/queue.h>
 #include <pthread.h>
+#include <time.h>
 
 #define NUM_CONNECTIONS (10)
 
@@ -34,6 +35,9 @@ SLIST_HEAD(slisthead, slist_data_s) head = SLIST_HEAD_INITIALIZER(head);
 struct slist_data_t *datap = NULL;
 
 pthread_mutex_t file_mutex;
+
+pthread_t timestamp_thread_handle;
+bool time_thread_terminate = false;
 
 int server_fd; // file descriptor for the server socket
 
@@ -56,11 +60,15 @@ void signal_handler(int signal) {
 	if(remove("/var/tmp/aesdsocketdata") != 0) {
 		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
 	}
+	
+	// close timestamp thread
+	time_thread_terminate = true;
+	pthread_join(timestamp_thread_handle, NULL);
 
 	while(not SLIST_EMPTY(&head)) {
 		// signal thread should terminate and wait for it to join
 		pthread_t thread_id = SLIST_FIRST(&head)->thread_handle;
-		SLIST_FIRST(&head)->terminate_thread = true;
+		SLIST_FIRST(&head)->args.terminate_thread = true;
 		pthread_join(thread_id, NULL);
 
 		// remove entry from the linked list and free memory
@@ -72,7 +80,40 @@ void signal_handler(int signal) {
 	exit(EXIT_SUCCESS);
 }
 
+void *timestamp_handler(void* args) {
+	(void)args;
+	while(not time_thread_terminate) {
+		sleep(10);
+		
+		const int BUF_LEN = 100;
+		char time_data[BUF_LEN];
+		memset(time_data, 0, BUF_LEN);
+		
+		// todo - get time and place it in rx_data
+		time_t cur_time = time(NULL);
+		if(cur_time == (time_t)(-1)) {
+			syslog(LOG_ERR, "error getting current time.");
+			exit(-1);
+		}
+		strftime(time_data, BUF_LEN, "timestamp: %a, %d %b %Y %T %z\n", localtime(&cur_time));
 
+		pthread_mutex_lock(&file_mutex);
+	
+		int data_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+		if(data_fd < 0) {
+			syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+			exit(-1);
+		}
+		if(write(data_fd, time_data, strlen(time_data)) != (ssize_t)strlen(time_data)) {
+			syslog(LOG_ERR, "error writing data to file.");
+			exit(-1);
+		}
+		close(data_fd);
+	
+		pthread_mutex_unlock(&file_mutex);
+	}
+	return (void*)0;
+}
 
 void *connection_handler(void* args) {
 	// Log message to the syslog “Accepted connection from xxx” where XXXX is the IP address of the connected client.
@@ -231,6 +272,12 @@ int main(int argc, char **argv) {
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
 
+	// set up timestamp thread
+	if(pthread_create(&timestamp_thread_handle, NULL, timestamp_handler, NULL) != 0) {
+		syslog(LOG_ERR, "thread creation failed");
+        return -1;
+	}
+	
 	// accept connections from new clients forever in a loop until SIGINT or SIGTERM is received.
 	while(true) {
 		int new_socket = accept(server_fd, (struct sockaddr*)&their_addr, &addr_size);
