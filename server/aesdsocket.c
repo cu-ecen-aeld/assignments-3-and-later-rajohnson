@@ -83,35 +83,42 @@ void signal_handler(int signal) {
 
 void *timestamp_handler(void* args) {
 	(void)args;
+	time_t last_time = time(NULL);
+	if(last_time == (time_t)(-1)) {
+        syslog(LOG_ERR, "error getting current time.");
+    	exit(-1);
+    }
+
 	while(not time_thread_terminate) {
-		sleep(10);
-		
-		const int BUF_LEN = 100;
-		char time_data[BUF_LEN];
-		memset(time_data, 0, BUF_LEN);
-		
-		// todo - get time and place it in rx_data
 		time_t cur_time = time(NULL);
 		if(cur_time == (time_t)(-1)) {
 			syslog(LOG_ERR, "error getting current time.");
 			exit(-1);
 		}
-		strftime(time_data, BUF_LEN, "timestamp: %a, %d %b %Y %T %z\n", localtime(&cur_time));
+		if(difftime(cur_time, last_time) >= 10.0) {		
+			const int BUF_LEN = 100;
+			char time_data[BUF_LEN];
+			memset(time_data, 0, BUF_LEN);
+		
+			strftime(time_data, BUF_LEN, "timestamp: %a, %d %b %Y %T %z\n", localtime(&cur_time));
 
-		pthread_mutex_lock(&file_mutex);
+			pthread_mutex_lock(&file_mutex);
 	
-		int data_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
-		if(data_fd < 0) {
-			syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
-			exit(-1);
-		}
-		if(write(data_fd, time_data, strlen(time_data)) != (ssize_t)strlen(time_data)) {
-			syslog(LOG_ERR, "error writing data to file.");
-			exit(-1);
-		}
-		close(data_fd);
+			int data_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+			if(data_fd < 0) {
+				syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+				exit(-1);
+			}
+			if(write(data_fd, time_data, strlen(time_data)) != (ssize_t)strlen(time_data)) {
+				syslog(LOG_ERR, "error writing data to file.");
+				exit(-1);
+			}
+			close(data_fd);
 	
-		pthread_mutex_unlock(&file_mutex);
+			pthread_mutex_unlock(&file_mutex);
+
+			last_time = cur_time;
+		}
 	}
 	return (void*)0;
 }
