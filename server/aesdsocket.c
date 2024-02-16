@@ -57,9 +57,6 @@ void signal_handler(int signal) {
 	// Logs message to the syslog “Caught signal, exiting” when SIGINT or SIGTERM is received.	
 	syslog(LOG_INFO, "Caught signal, exiting");
 	close(server_fd);
-	if(remove("/var/tmp/aesdsocketdata") != 0) {
-		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
-	}
 	
 	// close timestamp thread
 	time_thread_terminate = true;
@@ -75,6 +72,10 @@ void signal_handler(int signal) {
 		struct slist_data_s* entry = SLIST_FIRST(&head);
 		SLIST_REMOVE_HEAD(&head, entries);
 		free(entry);
+	}
+	
+	if(remove("/var/tmp/aesdsocketdata") != 0) {
+		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
 	}
 
 	exit(EXIT_SUCCESS);
