@@ -15,6 +15,7 @@
 #endif
 
 #include "aesd-circular-buffer.h"
+#include <stdbool.h>
 
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
@@ -44,9 +45,21 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 */
 void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
-    /**
-    * TODO: implement per description
-    */
+	buffer->entry[buffer->in_offs] = *add_entry;
+	buffer->in_offs++;
+
+	if(buffer->in_offs >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
+		buffer->in_offs = 0;
+	}
+	if(buffer->in_offs == buffer->out_offs) {
+		// this only needs to happen the first time, after it stays set.
+		buffer->full = true;
+	}
+	if(buffer->full) {
+		// keep the pointers lined up
+		buffer->out_offs = buffer->in_offs;
+	}
+
 }
 
 /**
@@ -55,4 +68,8 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
 {
     memset(buffer,0,sizeof(struct aesd_circular_buffer));
+
+	buffer->full = false;
+	buffer->in_offs = 0;
+	buffer->out_offs = 0;
 }
