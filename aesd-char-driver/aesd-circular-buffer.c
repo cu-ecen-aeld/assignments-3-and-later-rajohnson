@@ -16,6 +16,7 @@
 
 #include "aesd-circular-buffer.h"
 #include <stdbool.h>
+#include <iso646.h>
 
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
@@ -30,10 +31,27 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    /**
-    * TODO: implement per description
-    */
-    return NULL;
+	if(not buffer->full and buffer->in_offs == buffer->out_offs) {
+		// empty buffer
+		return NULL;
+	}
+
+	size_t working_offset = char_offset;
+	uint8_t working_out_offs = buffer->out_offs;
+
+	do {
+		if(buffer->entry[working_out_offs].size > working_offset) {
+			// this entry has the desired offset
+			*entry_offset_byte_rtn = working_offset;
+			return &(buffer->entry[working_out_offs]);
+		}
+		working_offset -= buffer->entry[working_out_offs].size;
+		working_out_offs++;
+		if(working_out_offs == AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
+			working_out_offs = 0;
+		}
+	} while(buffer->in_offs != working_out_offs);	
+    return NULL; // Couldn't find the offset within the data in the buffer
 }
 
 /**
