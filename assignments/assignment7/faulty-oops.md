@@ -1,3 +1,6 @@
+Here is the command that causes the oops and the resulting oops message:
+
+```
 #  echo “hello_world” > /dev/faulty
 Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
 Mem abort info:
@@ -41,3 +44,22 @@ Call trace:
  el0t_64_sync+0x1a0/0x1a4
 Code: d2800001 d2800000 d503233f d50323bf (b900003f)
 ---[ end trace 4009807f52177e25 ]---
+```
+
+The first line gives us a clue what is happening - a null pointer is being dereferenced. 
+`Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000`
+
+The program counter shows what was running when the oops was encountered. In the faulty module, specifically within faulty_write.
+`pc : faulty_write+0x14/0x20 [faulty]`
+
+The call trace shows a little more about the sequence of events that caused the oops, there was a system call that invoked __arm64_sys_write which called ksys_write which finally called faulty_write.
+```
+Call trace:
+ faulty_write+0x14/0x20 [faulty]
+ ksys_write+0x68/0x100
+ __arm64_sys_write+0x20/0x30
+ invoke_syscall+0x54/0x130
+ ...
+```
+
+
