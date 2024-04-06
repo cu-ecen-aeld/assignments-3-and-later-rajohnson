@@ -41,9 +41,9 @@ int aesd_open(struct inode *inode, struct file *filp)
 int aesd_release(struct inode *inode, struct file *filp)
 {
     PDEBUG("release");
-    /**
-     * TODO: handle release
-     */
+
+	// No hardware to release so can return without action.
+
     return 0;
 }
 
