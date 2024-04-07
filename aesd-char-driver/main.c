@@ -65,14 +65,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 {
     ssize_t retval = -ENOMEM;
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
-    /**
-     * TODO: handle write
-     */
 	size_t total_count;
 	size_t start_index;
 	
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
-		// todo - return error, couldn't lock
+		// couldn't lock
+		return -ERESTARTSYS;
 	}
 
 	if(aesd_device.temp_write_data == NULL) {
@@ -89,11 +87,15 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	}
 	
 	if(aesd_device.temp_write_data == NULL) {
-		// todo - handle failure to allocate
+		// failed to allocate memory
+		retval = -ENOMEM;
+		goto write_out;
 	}
 
 	if(copy_from_user(&aesd_device.temp_write_data[start_index], buf, count) != 0) {
-		// todo - copy failed
+		// copy failed
+		retval = -EFAULT;
+		goto write_out;
 	}
 
 	if(aesd_device.temp_write_data[total_count] == '\n') {
@@ -105,9 +107,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	}
 	
 	retval = count;
-	
-	mutex_unlock(&aesd_device.lock);
 
+  write_out:	
+	mutex_unlock(&aesd_device.lock);
     return retval;
 }
 struct file_operations aesd_fops = {
