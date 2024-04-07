@@ -101,8 +101,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		struct aesd_buffer_entry entry = {.size=total_count, .buffptr=aesd_device.temp_write_data};
 		char* old_data = aesd_circular_buffer_add_entry(&aesd_device.buffer, &entry);
 		kfree(old_data); // can be passed to kfree, even if NULL
-		 aesd_device.temp_write_data = NULL; // Has been saved to buffer.
+		aesd_device.temp_write_data = NULL; // Has been saved to buffer.
 	}
+	
+	retval = count;
 	
 	mutex_unlock(&aesd_device.lock);
 
@@ -174,9 +176,7 @@ void aesd_cleanup_module(void)
 		kfree(entry->buffptr);
 	}
 
-	if(aesd_device.temp_write_data != NULL) {
-		kfree(aesd_device.temp_write_data);  // No need to check for NULL, just pass everything in.
-	}
+	kfree(aesd_device.temp_write_data);  // No need to check for NULL, just pass everything in.
 
     unregister_chrdev_region(devno, 1);
 }
