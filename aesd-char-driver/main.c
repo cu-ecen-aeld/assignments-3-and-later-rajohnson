@@ -54,9 +54,16 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 {
     ssize_t retval = 0;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
-    /**
-     * TODO: handle read
-     */
+	
+	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
+		// couldn't lock
+		return -ERESTARTSYS;
+	}
+
+	
+
+  read_out:	
+	mutex_unlock(&aesd_device.lock);
     return retval;
 }
 
@@ -67,6 +74,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 	size_t total_count;
 	size_t start_index;
+	// todo - what is f_pos supposed to do here?
 	
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
 		// couldn't lock
