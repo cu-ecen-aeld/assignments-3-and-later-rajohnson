@@ -109,7 +109,8 @@ int aesd_init_module(void)
     /**
      * TODO: initialize the AESD specific portion of the device
      */
-
+	mutex_init(&aesd_device.lock);
+	
     result = aesd_setup_cdev(&aesd_device);
 
     if( result ) {
@@ -130,7 +131,7 @@ void aesd_cleanup_module(void)
      */
 	uint8_t index;
 	struct aesd_buffer_entry *entry;
-	AESD_CIRCULAR_BUFFER_FOREACH(entry,&(aesd_device.buffer),index) {
+	AESD_CIRCULAR_BUFFER_FOREACH(entry,&aesd_device.buffer,index) {
 		kfree(entry->buffptr);
 	}
 
