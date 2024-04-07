@@ -99,7 +99,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	}
 
 	if(aesd_device.temp_write_data[total_count] == '\n') {
-		// todo - data terminated with newline - push to buffer
+		// data is terminated with newline - push to buffer
 		struct aesd_buffer_entry entry = {.size=total_count, .buffptr=aesd_device.temp_write_data};
 		char* old_data = aesd_circular_buffer_add_entry(&aesd_device.buffer, &entry);
 		kfree(old_data); // can be passed to kfree, even if NULL
