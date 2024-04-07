@@ -18,6 +18,7 @@
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
 #include <linux/slab.h>
+#include <linux/uaccess.h> // copy_from_user (and to)
 #include "aesdchar.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -67,6 +68,41 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     /**
      * TODO: handle write
      */
+	size_t total_count;
+	size_t start_index;
+	
+	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
+		// todo - return error, couldn't lock
+	}
+
+	if(aesd_device.temp_write_data == NULL) {
+		// get memory
+		total_count = count;
+		start_index = 0;
+		aesd_device.temp_write_data = kmalloc(total_count, GFP_KERNEL);
+	} else {
+		// get memory for both new and existing
+		size_t previous_count = strlen(aesd_device.temp_write_data); 
+		total_count = count + previous_count;
+		start_index = previous_count;
+		aesd_device.temp_write_data = krealloc(aesd_device.temp_write_data, total_count, GFP_KERNEL);
+	}
+	
+	if(aesd_device.temp_write_data == NULL) {
+		// todo - handle failure to allocate
+	}
+
+	if(copy_from_user(&aesd_device.temp_write_data[start_index], buf, count) != 0) {
+		// todo - copy failed
+	}
+
+	if(aesd_device.temp_write_data[total_count] == '/n') {
+		// todo - data terminated with newline - push to buffer
+		// todo - kfree old data if needed
+	}
+	
+	mutex_unlock(&aesd_device.lock);
+
     return retval;
 }
 struct file_operations aesd_fops = {
