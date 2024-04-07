@@ -60,7 +60,29 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 		return -ERESTARTSYS;
 	}
 
-	
+	size_t offset;	
+	struct aesd_buffer_entry* entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.buffer, *f_pos, &offset); 
+	size_t read_len;
+
+	if(entry != NULL) { // data is valid
+		size_t data_available = entry->size - offset;
+		if(data_available > count) {
+			read_len = count;
+		} else {
+			read_len = data_available;
+		}
+
+		if(copy_to_user(buf, entry->buffptr + offset, read_len) != 0) {
+			// copy failed
+			retval = -EFAULT;
+			goto read_out;
+		}
+	} else { // at end of circular buffer
+		read_len = 0;
+	}
+
+	*f_pos += read_len;
+	retval = read_len;
 
   read_out:	
 	mutex_unlock(&aesd_device.lock);
@@ -74,7 +96,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 	size_t total_count;
 	size_t start_index;
-	// todo - what is f_pos supposed to do here?
+	// todo - what is f_pos supposed to do here? Possibly used in next assignment?
 	
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
 		// couldn't lock
