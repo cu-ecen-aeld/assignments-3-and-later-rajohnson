@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
+#include <linux/slab.h>
 #include "aesdchar.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -127,6 +128,15 @@ void aesd_cleanup_module(void)
     /**
      * TODO: cleanup AESD specific poritions here as necessary
      */
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
+	AESD_CIRCULAR_BUFFER_FOREACH(entry,&(aesd_device.buffer),index) {
+		kfree(entry->buffptr);
+	}
+
+	if(aesd_device.temp_write_data != NULL) {
+		kfree(aesd_device.temp_write_data);  // No need to check for NULL, just pass everything in.
+	}
 
     unregister_chrdev_region(devno, 1);
 }
