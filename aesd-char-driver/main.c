@@ -128,8 +128,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		goto write_out;
 	}
 
-	if(aesd_device.temp_write_data[total_count] == '\n') {
+	if(aesd_device.temp_write_data[total_count-1] == '\n') {
 		// data is terminated with newline - push to buffer
+		//PDEBUG("Writing %zu bytes to buffer: %s", total_count, aesd_device.temp_write_data);
 		struct aesd_buffer_entry entry = {.size=total_count, .buffptr=aesd_device.temp_write_data};
 		char* old_data = aesd_circular_buffer_add_entry(&aesd_device.buffer, &entry);
 		kfree(old_data); // can be passed to kfree, even if NULL
