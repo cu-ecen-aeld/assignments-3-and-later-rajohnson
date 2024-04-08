@@ -109,13 +109,16 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		// get memory
 		total_count = count;
 		start_index = 0;
-		aesd_device.temp_write_data = kmalloc(total_count, GFP_KERNEL);
+		aesd_device.temp_write_data = kmalloc(count, GFP_KERNEL);
+		memset(aesd_device.temp_write_data, 0, count);
+		PDEBUG("kmalloc #%zu", count);
 	} else {
 		// get memory for both new and existing
 		size_t previous_count = strlen(aesd_device.temp_write_data); 
 		total_count = count + previous_count -1;
 		start_index = previous_count - 1;
 		aesd_device.temp_write_data = krealloc(aesd_device.temp_write_data, total_count, GFP_KERNEL);
+		PDEBUG("krealloc #%zu, old #%zu s: %s", count, previous_count, aesd_device.temp_write_data);
 	}
 	
 	if(aesd_device.temp_write_data == NULL) {
@@ -132,9 +135,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
 	if(aesd_device.temp_write_data[total_count-1] == '\n') {
 		// data is terminated with newline - push to buffer
-		//PDEBUG("Writing %zu bytes to buffer: %s", total_count, aesd_device.temp_write_data);
 		struct aesd_buffer_entry entry = {.size=total_count, .buffptr=aesd_device.temp_write_data};
 		const char* old_data = aesd_circular_buffer_add_entry(&aesd_device.buffer, &entry);
+		PDEBUG("Writing %zu bytes to buffer: %s", total_count, aesd_device.temp_write_data);
 		kfree(old_data); // can be passed to kfree, even if NULL
 		aesd_device.temp_write_data = NULL; // Has been saved to buffer.
 	}
