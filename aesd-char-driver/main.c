@@ -30,10 +30,11 @@ struct aesd_dev aesd_device;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {
+	struct aesd_dev *dev;
+
     PDEBUG("open");
 	
 	// save device information
-	struct aesd_dev *dev;
 	dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
 	filp->private_data = dev;
 
@@ -53,16 +54,16 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval = 0;
-    PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
+	size_t offset;	
+	struct aesd_buffer_entry* entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.buffer, *f_pos, &offset); 
+	size_t read_len;
+    
+	PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 	
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
 		// couldn't lock
 		return -ERESTARTSYS;
 	}
-
-	size_t offset;	
-	struct aesd_buffer_entry* entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.buffer, *f_pos, &offset); 
-	size_t read_len;
 
 	if(entry != NULL) { // data is valid
 		size_t data_available = entry->size - offset;
@@ -93,9 +94,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval = -ENOMEM;
-    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 	size_t total_count;
 	size_t start_index;
+
+    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 	// todo - what is f_pos supposed to do here? Possibly used in next assignment?
 	
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
@@ -196,6 +198,9 @@ int aesd_init_module(void)
 
 void aesd_cleanup_module(void)
 {
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
+
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
     cdev_del(&aesd_device.cdev);
@@ -203,8 +208,6 @@ void aesd_cleanup_module(void)
     /**
      * TODO: cleanup AESD specific poritions here as necessary
      */
-	uint8_t index;
-	struct aesd_buffer_entry *entry;
 	AESD_CIRCULAR_BUFFER_FOREACH(entry,&aesd_device.buffer,index) {
 		kfree(entry->buffptr);
 	}
