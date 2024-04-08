@@ -115,7 +115,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	} else {
 		// get memory for both new and existing
 		size_t previous_count = strlen(aesd_device.temp_write_data); 
-		total_count = count + previous_count - 1;
+		total_count = count + previous_count;
 		start_index = previous_count;
 		aesd_device.temp_write_data = krealloc(aesd_device.temp_write_data, total_count+1, GFP_KERNEL);
 		PDEBUG("krealloc #%zu, old #%zu s: %s", count, previous_count, aesd_device.temp_write_data);
