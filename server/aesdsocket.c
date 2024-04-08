@@ -19,6 +19,8 @@
 
 #define NUM_CONNECTIONS (10)
 
+#define OUTPUT_FILENAME "/dev/aesdchar"
+
 struct thread_args_s {
 	int client_fd; 
 	bool terminate_thread;
@@ -59,8 +61,10 @@ void signal_handler(int signal) {
 	close(server_fd);
 	
 	// close timestamp thread
+/* don't have timestamp in assignment 8
 	time_thread_terminate = true;
 	pthread_join(timestamp_thread_handle, NULL);
+*/
 
 	while(not SLIST_EMPTY(&head)) {
 		// signal thread should terminate and wait for it to join
@@ -74,8 +78,8 @@ void signal_handler(int signal) {
 		free(entry);
 	}
 	
-	if(remove("/var/tmp/aesdsocketdata") != 0) {
-		syslog(LOG_ERR, "error deleting /var/tmp/aesdsocketdata");
+	if(remove(OUTPUT_FILENAME) != 0) {
+		syslog(LOG_ERR, "error deleting OUTPUT_FILENAME");
 	}
 
 	exit(EXIT_SUCCESS);
@@ -104,9 +108,9 @@ void *timestamp_handler(void* args) {
 
 			pthread_mutex_lock(&file_mutex);
 	
-			int data_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+			int data_fd = open(OUTPUT_FILENAME, O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
 			if(data_fd < 0) {
-				syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+				syslog(LOG_ERR, "error opening log file OUTPUT_FILENAME");
 				exit(-1);
 			}
 			if(write(data_fd, time_data, strlen(time_data)) != (ssize_t)strlen(time_data)) {
@@ -143,9 +147,9 @@ void *connection_handler(void* args) {
 	//Your implementation should use a newline to separate data packets received.  In other words a packet is considered complete when a newline character is found in the input receive stream, and each newline should result in an append to the /var/tmp/aesdsocketdata file.
 	// You may assume the data stream does not include null characters (therefore can be processed using string handling functions).
 	// You may assume the length of the packet will be shorter than the available heap size.  In other words, as long as you handle malloc() associated failures with error messages you may discard associated over-length packets.
-	int rxdata_fd = open("/var/tmp/aesdsocketdata", O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
+	int rxdata_fd = open(OUTPUT_FILENAME, O_CREAT | O_RDWR | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);	
 	if(rxdata_fd < 0) {
-		syslog(LOG_ERR, "error opening log file /var/tmp/aesdsocketdata");
+		syslog(LOG_ERR, "error opening log file OUTPUT_FILENAME");
 		exit(-1);
 	}
 	
@@ -281,10 +285,12 @@ int main(int argc, char **argv) {
 	socklen_t addr_size = sizeof their_addr;
 
 	// set up timestamp thread
+/* don't want timestamp for assignment 8
 	if(pthread_create(&timestamp_thread_handle, NULL, timestamp_handler, NULL) != 0) {
 		syslog(LOG_ERR, "thread creation failed");
         return -1;
 	}
+*/
 	
 	// accept connections from new clients forever in a loop until SIGINT or SIGTERM is received.
 	while(true) {
