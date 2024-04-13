@@ -152,8 +152,36 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	mutex_unlock(&aesd_device.lock);
     return retval;
 }
+
+loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
+{
+	//struct aesd_dev *dev = filp->private_data;
+    loff_t newpos = 0;
+
+    switch(whence) {
+    	case 0: /* SEEK_SET */
+        //newpos = off; // todo - implement
+        break;
+
+		case 1: /* SEEK_CUR */
+        //newpos = filp->f_pos + off; // todo - implement
+        break;
+
+    	case 2: /* SEEK_END */
+        //newpos = dev->size + off; // todo - implement
+        break;
+
+       	default: /* can't happen */
+		return -EINVAL;
+     }
+     //if (newpos < 0) return -EINVAL;
+     //filp->f_pos = newpos;
+     return newpos;
+}
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
+	.llseek = 	aesd_llseek,
     .read =     aesd_read,
     .write =    aesd_write,
     .open =     aesd_open,
