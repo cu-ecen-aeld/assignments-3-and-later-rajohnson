@@ -167,8 +167,8 @@ void *connection_handler(void* args) {
 		if(sscanf(rx_data, seek_cmd, &x, &y) == 2) {
 			struct aesd_seekto seekto = {.write_cmd = x, .write_cmd_offset = y};
 			syslog(LOG_ERR, "seek cmd:%u offset %u", x, y);
-			if(ioctl(rxdata_fd, AESDCHAR_IOCSEEKTO, &seekto) == -1) {
-				syslog(LOG_ERR, "error handling AESDCHAR_IOCSEEKTO command.");
+			if(ioctl(rxdata_fd, AESDCHAR_IOCSEEKTO, &seekto) != 0) {
+				syslog(LOG_ERR, "error handling AESDCHAR_IOCSEEKTO command. seekto cmd=%i offset=%i", seekto.write_cmd, seekto.write_cmd_offset);
 				pthread_mutex_unlock(&file_mutex);
 				close(rxdata_fd);
 				close(client_fd);
