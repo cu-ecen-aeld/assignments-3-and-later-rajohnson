@@ -160,7 +160,7 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 	size_t buffer_length = 0;
 	uint8_t index;
 	struct aesd_buffer_entry *entry;
-    PDEBUG("aesd_llseek");
+    PDEBUG("aesd_llseek off:%lli whence:%i", off, whence);
 
 	// Take mutex
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
