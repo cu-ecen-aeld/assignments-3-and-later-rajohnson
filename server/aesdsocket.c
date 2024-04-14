@@ -79,9 +79,9 @@ void signal_handler(int signal) {
 		free(entry);
 	}
 	
-	if(remove(OUTPUT_FILENAME) != 0) {
-		syslog(LOG_ERR, "error deleting OUTPUT_FILENAME");
-	}
+	//if(remove(OUTPUT_FILENAME) != 0) {
+	//	syslog(LOG_ERR, "error deleting OUTPUT_FILENAME");
+	//}
 
 	exit(EXIT_SUCCESS);
 }
@@ -175,6 +175,7 @@ void *connection_handler(void* args) {
 				exit(-1);
 			}
 		} else {
+			syslog(LOG_INFO, "write %i bytes to buffer", numbytes);
 			if(write(rxdata_fd, rx_data, numbytes) != numbytes) {
 				syslog(LOG_ERR, "error writing data to file.");
 				pthread_mutex_unlock(&file_mutex);
@@ -185,6 +186,7 @@ void *connection_handler(void* args) {
 		}
 
 		if(rx_data[numbytes - 1] == '\n') {
+			syslog(LOG_INFO, "newline rx'd");
 			break;
 		}
 
