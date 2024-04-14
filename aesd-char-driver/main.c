@@ -21,6 +21,7 @@
 #include <linux/uaccess.h> // copy_from_user (and to)
 #include "aesdchar.h"
 #include "aesd_ioctl.h"
+#include <iso646.h>
 
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -189,9 +190,8 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct aesd_seekto seekto;	
 	int retval;
-	size_t buffer_length = 0;
-	uint8_t index;
-	struct aesd_buffer_entry *entry;
+	int prev_cmd_offset = 0;
+	int i;
 
 	if (_IOC_TYPE(cmd) != AESD_IOC_MAGIC) return -ENOTTY;
 	if (_IOC_NR(cmd) > AESDCHAR_IOC_MAXNR) return -ENOTTY;
@@ -201,24 +201,25 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if(copy_from_user(&seekto, (const void __user *)arg, sizeof(seekto)) != 0) {
 			return -EFAULT;
 		}
-		// todo - seek
 		// Take mutex
 		if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
 			// couldn't lock
 			return -ERESTARTSYS;
 		}
 
-		// Calculate buffer length
-		AESD_CIRCULAR_BUFFER_FOREACH(entry,&aesd_device.buffer,index) {
-			buffer_length += entry->size;
+		if((seekto.write_cmd >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) or (aesd_device.buffer.entry[seekto.write_cmd].size < seekto.write_cmd_offset)) {
+			retval = -EINVAL;
+			mutex_unlock(&aesd_device.lock);
+			break;
 		}
 
-		// Delegate work to find location to helper function as suggested in assignment video (~8:30)
-		retval = fixed_size_llseek(filp, seekto.write_cmd_offset, seekto.write_cmd, buffer_length);
-
-		if(retval > 0) {
-			filp->f_pos = retval;
+		// Count bytes in previous entries 
+		for(i = 0; i < seekto.write_cmd; ++i) {
+			prev_cmd_offset += aesd_device.buffer.entry[i].size;
 		}
+
+		// Update f_pos
+		filp->f_pos = prev_cmd_offset + seekto.write_cmd_offset;
 
 		// Release mutex
 		mutex_unlock(&aesd_device.lock);
