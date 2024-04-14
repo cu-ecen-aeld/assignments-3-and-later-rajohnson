@@ -174,6 +174,7 @@ void *connection_handler(void* args) {
 				close(client_fd);
 				exit(-1);
 			}
+			break;
 		} else {
 			syslog(LOG_INFO, "write %i bytes to buffer", numbytes);
 			if(write(rxdata_fd, rx_data, numbytes) != numbytes) {
@@ -183,21 +184,18 @@ void *connection_handler(void* args) {
 				close(client_fd);
 				exit(-1);
 			}
-		}
-
-		if(rx_data[numbytes - 1] == '\n') {
-			syslog(LOG_INFO, "newline rx'd");
-			break;
+		
+			if(rx_data[numbytes - 1] == '\n') {
+				syslog(LOG_INFO, "newline rx'd");
+				lseek(rxdata_fd, 0, SEEK_SET);
+				break;
+			}
 		}
 
 		memset(rx_data, 0, BUF_LEN);
 	}
 
 	pthread_mutex_unlock(&file_mutex);
-
-	// Return the full content of /var/tmp/aesdsocketdata to the client as soon as the received data packet completes.
-	// move back to the beginning of the file
-	lseek(rxdata_fd, 0, SEEK_SET);
 
 	char tx_data[BUF_LEN];
 	memset(tx_data, 0, BUF_LEN);
