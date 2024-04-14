@@ -155,28 +155,34 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
 loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 {
-	//struct aesd_dev *dev = filp->private_data;
     loff_t newpos = 0;
+	size_t buffer_length = 0;
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
 
-    switch(whence) {
-    	case 0: /* SEEK_SET */
-        //newpos = off; // todo - implement
-        break;
+	// Take mutex
+	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
+		// couldn't lock
+		return -ERESTARTSYS;
+	}
 
-		case 1: /* SEEK_CUR */
-        //newpos = filp->f_pos + off; // todo - implement
-        break;
+	// Calculate buffer length
+	AESD_CIRCULAR_BUFFER_FOREACH(entry,&aesd_device.buffer,index) {
+		buffer_length += entry->size;
+	}
 
-    	case 2: /* SEEK_END */
-        //newpos = dev->size + off; // todo - implement
-        break;
 
-       	default: /* can't happen */
-		return -EINVAL;
-     }
-     //if (newpos < 0) return -EINVAL;
-     //filp->f_pos = newpos;
-     return newpos;
+	// Delegate work to find location to helper function as suggested in assignment video (~8:30)
+	newpos = fixed_size_llseek(filp, off, whence, buffer_length);
+
+	if(newpos > 0) {
+		filp->f_pos = newpos;
+	}
+
+	// Release mutex
+	mutex_unlock(&aesd_device.lock);
+
+    return newpos;
 }
 
 struct file_operations aesd_fops = {
