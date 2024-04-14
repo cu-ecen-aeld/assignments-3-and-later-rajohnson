@@ -185,6 +185,52 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
     return newpos;
 }
 
+long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	struct aesd_seekto seekto;	
+	int retval;
+	size_t buffer_length = 0;
+	uint8_t index;
+	struct aesd_buffer_entry *entry;
+
+	if (_IOC_TYPE(cmd) != AESD_IOC_MAGIC) return -ENOTTY;
+	if (_IOC_NR(cmd) > AESDCHAR_IOC_MAXNR) return -ENOTTY;
+
+	switch(cmd) {
+		case AESDCHAR_IOCSEEKTO:
+		if(copy_from_user(&seekto, (const void __user *)arg, sizeof(seekto)) != 0) {
+			return -EFAULT;
+		}
+		// todo - seek
+		// Take mutex
+		if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
+			// couldn't lock
+			return -ERESTARTSYS;
+		}
+
+		// Calculate buffer length
+		AESD_CIRCULAR_BUFFER_FOREACH(entry,&aesd_device.buffer,index) {
+			buffer_length += entry->size;
+		}
+
+		// Delegate work to find location to helper function as suggested in assignment video (~8:30)
+		retval = fixed_size_llseek(filp, seekto.write_cmd_offset, seekto.write_cmd, buffer_length);
+
+		if(retval > 0) {
+			filp->f_pos = retval;
+		}
+
+		// Release mutex
+		mutex_unlock(&aesd_device.lock);
+		break;
+
+		default:
+		return -ENOTTY;
+	}
+
+	return retval;
+}
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
 	.llseek = 	aesd_llseek,
@@ -192,6 +238,7 @@ struct file_operations aesd_fops = {
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+	.unlocked_ioctl = aesd_ioctl,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
