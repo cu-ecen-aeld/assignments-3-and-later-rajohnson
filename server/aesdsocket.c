@@ -16,6 +16,7 @@
 #include <sys/queue.h>
 #include <pthread.h>
 #include <time.h>
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 #define NUM_CONNECTIONS (10)
 
@@ -158,16 +159,33 @@ void *connection_handler(void* args) {
 	memset(rx_data, 0, BUF_LEN);
 	int numbytes;
 	while((numbytes = recv(client_fd, rx_data, BUF_LEN - 1, 0)) > 0) {
-		if(write(rxdata_fd, rx_data, numbytes) != numbytes) {
-			syslog(LOG_ERR, "error writing data to file.");
-			exit(-1);
-		}
+		// check for AESDCHAR_IOCSEEKTO, if found issue ioctl command, if not append data
+		unsigned int x,y;
+		const char* seek_cmd = "AESDCHAR_IOCSEEKTO:%u,%u";
+		if(sscanf(rx_data, seek_cmd, &x, &y) == 2) {
+			struct aesd_seekto seekto = {.write_cmd = x, .write_cmd_offset = y};
+			if(ioctl(rxdata_fd, AESDCHAR_IOCSEEKTO, &seekto) == -1) {
+				syslog(LOG_ERR, "error handling AESDCHAR_IOCSEEKTO command.");
+				pthread_mutex_unlock(&file_mutex);
+				close(rxdata_fd);
+				close(client_fd);
+				exit(-1);
+			}
+		} else {
+			if(write(rxdata_fd, rx_data, numbytes) != numbytes) {
+				syslog(LOG_ERR, "error writing data to file.");
+				pthread_mutex_unlock(&file_mutex);
+				close(rxdata_fd);
+				close(client_fd);
+				exit(-1);
+			}
 
-		if(rx_data[numbytes - 1] == '\n') {
-			break;
-		}
+			if(rx_data[numbytes - 1] == '\n') {
+				break;
+			}
 
-		memset(rx_data, 0, BUF_LEN);
+			memset(rx_data, 0, BUF_LEN);
+		}
 	}
 
 	pthread_mutex_unlock(&file_mutex);
