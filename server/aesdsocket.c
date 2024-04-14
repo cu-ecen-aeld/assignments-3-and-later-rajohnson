@@ -162,8 +162,11 @@ void *connection_handler(void* args) {
 		// check for AESDCHAR_IOCSEEKTO, if found issue ioctl command, if not append data
 		unsigned int x,y;
 		const char* seek_cmd = "AESDCHAR_IOCSEEKTO:%u,%u";
+		syslog(LOG_INFO, "recieved %i bytes.", numbytes);
+ 
 		if(sscanf(rx_data, seek_cmd, &x, &y) == 2) {
 			struct aesd_seekto seekto = {.write_cmd = x, .write_cmd_offset = y};
+			syslog(LOG_ERR, "seek cmd:%u offset %u", x, y);
 			if(ioctl(rxdata_fd, AESDCHAR_IOCSEEKTO, &seekto) == -1) {
 				syslog(LOG_ERR, "error handling AESDCHAR_IOCSEEKTO command.");
 				pthread_mutex_unlock(&file_mutex);
@@ -179,13 +182,13 @@ void *connection_handler(void* args) {
 				close(client_fd);
 				exit(-1);
 			}
-
-			if(rx_data[numbytes - 1] == '\n') {
-				break;
-			}
-
-			memset(rx_data, 0, BUF_LEN);
 		}
+
+		if(rx_data[numbytes - 1] == '\n') {
+			break;
+		}
+
+		memset(rx_data, 0, BUF_LEN);
 	}
 
 	pthread_mutex_unlock(&file_mutex);
