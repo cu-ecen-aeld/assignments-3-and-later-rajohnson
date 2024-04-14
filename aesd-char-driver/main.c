@@ -160,6 +160,7 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 	size_t buffer_length = 0;
 	uint8_t index;
 	struct aesd_buffer_entry *entry;
+    PDEBUG("aesd_llseek");
 
 	// Take mutex
 	if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
@@ -189,25 +190,33 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct aesd_seekto seekto;	
-	int retval;
+	int retval = 0;
 	int prev_cmd_offset = 0;
 	int i;
+
+    PDEBUG("aesd_ioctl cmd=%i arg=%ld", cmd, arg);
 
 	if (_IOC_TYPE(cmd) != AESD_IOC_MAGIC) return -ENOTTY;
 	if (_IOC_NR(cmd) > AESDCHAR_IOC_MAXNR) return -ENOTTY;
 
 	switch(cmd) {
 		case AESDCHAR_IOCSEEKTO:
+		PDEBUG("AESDCHAR_IOCSEEKTO");
 		if(copy_from_user(&seekto, (const void __user *)arg, sizeof(seekto)) != 0) {
-			return -EFAULT;
+			PDEBUG("Failed to copy arg from userspace.");
+			retval = -EFAULT;
+			break;
 		}
 		// Take mutex
 		if(mutex_lock_interruptible(&aesd_device.lock) != 0) {
 			// couldn't lock
-			return -ERESTARTSYS;
+			PDEBUG("couldn't take mutex");
+			retval = -ERESTARTSYS;
+			break;
 		}
 
 		if((seekto.write_cmd >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) or (aesd_device.buffer.entry[seekto.write_cmd].size < seekto.write_cmd_offset)) {
+			PDEBUG("bad argument");
 			retval = -EINVAL;
 			mutex_unlock(&aesd_device.lock);
 			break;
@@ -218,8 +227,11 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			prev_cmd_offset += aesd_device.buffer.entry[i].size;
 		}
 
+		PDEBUG("previous f_pos=%lli", filp->f_pos);
 		// Update f_pos
 		filp->f_pos = prev_cmd_offset + seekto.write_cmd_offset;
+		PDEBUG("new f_pos=%lli", filp->f_pos);
+		
 
 		// Release mutex
 		mutex_unlock(&aesd_device.lock);
